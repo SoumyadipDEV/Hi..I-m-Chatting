@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #e0f7fa;
+            font-family: Arial, sans-serif;
+            position: relative;
+        }
+
+        #chat-container {
+            text-align: center;
+            background-color: #ffffff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #00796b;
+        }
+
+        #message {
+            width: 80%;
+            padding: 10px;
+            border: 2px solid #00796b;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        #sendBtn {
+            padding: 10px 20px;
+            border: none;
+            background-color: #00796b;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        #sendBtn:hover {
+            background-color: #004d40;
+        }
+
+        #messages {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            text-align: left;
+        }
+
+        p {
+            margin: 0;
+            padding: 5px 0;
+            border-bottom: 1px solid #e0f7fa;
+        }
+
+        #user-status {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: #ffffff;
+            border: 2px solid #00796b;
+            border-radius: 10px;
+            padding: 10px;
+            width: 200px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .user {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .user-dot {
+            height: 10px;
+            width: 10px;
+            background-color: green;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .user-name {
+            font-size: 14px;
+            color: #00796b;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="chat-container">
+        <h1>Hi.. I'am Chatting</h1>
+        <div id="messages"></div>
+        <input type="text" placeholder="Enter new message" id="message" />
+        <button id="sendBtn">Send</button>
+    </div>
+    <div id="user-status"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const sendBtn = document.getElementById('sendBtn');
+        const messageInput = document.getElementById('message');
+        const allMessages = document.getElementById('messages');
+        const userStatus = document.getElementById('user-status');
+
+        // Prompt for chat name
+        const chatName = prompt("Enter your chat name:");
+
+        // Emit event to add user
+        socket.emit('add-user', chatName);
+
+        socket.on('broadcast', (data) => {
+            const p = document.createElement('p');
+            p.innerText = `${data.name}: ${data.message}`;
+            allMessages.appendChild(p);
+        });
+
+        sendBtn.addEventListener('click', (e) => {
+            const message = messageInput.value;
+            socket.emit('user-message', { name: chatName, message });
+            messageInput.value = '';  // Clear input field after sending message
+        });
+
+        socket.on('update-users', (users) => {
+            userStatus.innerHTML = ''; // Clear the user list
+            users.forEach(user => {
+                const div = document.createElement('div');
+                div.classList.add('user');
+                const dot = document.createElement('div');
+                dot.classList.add('user-dot');
+                const name = document.createElement('span');
+                name.classList.add('user-name');
+                name.innerText = user;
+                div.appendChild(dot);
+                div.appendChild(name);
+                userStatus.appendChild(div);
+            });
+        });
+    </script>
+</body>
+
+</html>
