@@ -131,10 +131,18 @@
             allMessages.appendChild(p);
         });
 
+        // Disable the send button if the input is empty
+        messageInput.addEventListener('input', () => {
+            sendBtn.disabled = !messageInput.value.trim();
+        });
+
         sendBtn.addEventListener('click', (e) => {
-            const message = messageInput.value;
-            socket.emit('user-message', { name: chatName, message });
-            messageInput.value = '';  // Clear input field after sending message
+            const message = messageInput.value.trim();
+            if (message) {
+                socket.emit('user-message', { name: chatName, message });
+                messageInput.value = '';  // Clear input field after sending message
+                sendBtn.disabled = true;  // Disable send button until new message is entered
+            }
         });
 
         socket.on('update-users', (users) => {
