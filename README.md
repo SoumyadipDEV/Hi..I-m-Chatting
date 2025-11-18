@@ -35,8 +35,10 @@ GEMINI_API_KEY should be kept secret and never committed.
 
 Example `.env`:
 
+---
+
 Start server:
-node index.js.
+node `index.js`.
 
 Open browser:
-http://localhost:3000
+`http://localhost:3000`
