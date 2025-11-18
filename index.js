@@ -7,32 +7,38 @@ const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch
 // Load environment variables from .env
 require('dotenv').config();
 
+const cookieParser = require('cookie-parser');
+
+const db = require('./lib/db');
+const createSessionMiddleware = require('./lib/session');
+const authRoutes = require('./routes/auth');
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Parse JSON bodies for API endpoints
-app.use(express.json());
-
-const users = new Map();
-
-io.on('connection', (socket) => {
-    socket.on('add-user', (name) => {
-        users.set(socket.id, name);
-        io.emit('update-users', Array.from(users.values()));
-    });
-
-    socket.on('user-message', (data) => {
-        io.emit('broadcast', data);
-    });
-
-    socket.on('disconnect', () => {
-        users.delete(socket.id);
-        io.emit('update-users', Array.from(users.values()));
-    });
+// Remove any CSP headers and allow external resources
+app.use((req, res, next) => {
+  res.removeHeader('Content-Security-Policy');
+  res.removeHeader('Content-Security-Policy-Report-Only');
+  res.removeHeader('Cross-Origin-Embedder-Policy');
+  res.removeHeader('Cross-Origin-Opener-Policy');
+  res.removeHeader('Cross-Origin-Resource-Policy');
+  next();
 });
 
-// Server-side Gemini API proxy endpoint
+// Basic middleware
+app.use(express.json());
+app.use(cookieParser());
+
+// Session middleware (uses better-sqlite3 session store)
+const sessionMiddleware = createSessionMiddleware(db);
+app.use(sessionMiddleware);
+
+// Mount auth routes
+app.use('/api', authRoutes);
+
+// Server-side Gemini API proxy endpoint (kept intact)
 app.post('/api/gemini', async (req, res) => {
     const { prompt } = req.body || {};
     if (!prompt || typeof prompt !== 'string') {
@@ -88,10 +94,57 @@ app.post('/api/gemini', async (req, res) => {
     return res.status(500).json({ error: 'Unhandled server error' });
 });
 
+// Serve static files
 app.use(express.static(path.resolve('./public')));
 
 app.get('/', (req, res) => {
     return res.sendFile(path.resolve('./public/index.html'));
+});
+
+// Socket.IO authentication via session
+io.use((socket, next) => {
+  // reuse express-session middleware to populate socket.request.session
+  sessionMiddleware(socket.request, {}, (err) => {
+    if (err) return next(err);
+    if (socket.request.session && socket.request.session.user) return next();
+    return next(new Error('Unauthorized'));
+  });
+});
+
+const clients = new Map();
+
+io.on('connection', (socket) => {
+    const sess = socket.request.session;
+    const user = sess.user;
+    const sessionId = socket.request.sessionID;
+
+    if (!user) {
+      socket.disconnect(true);
+      return;
+    }
+
+    clients.set(socket.id, { username: user.username, userId: user.id, sessionId, fullname: user.fullname });
+
+    // broadcast active usernames with fullnames (unique)
+    const usernames = Array.from(new Set(Array.from(clients.values()).map(u => u.fullname || u.username)));
+    io.emit('update-users', usernames);
+
+    socket.on('user-message', (data) => {
+        io.emit('broadcast', data);
+    });
+
+    socket.on('disconnect', () => {
+        const info = clients.get(socket.id);
+        if (info && info.sessionId) {
+            const { sessionId: sid, userId } = info;
+            const { DateTime } = require('luxon');
+            const now = DateTime.now().setZone('Asia/Kolkata').toISO();
+            db.updateLogoutBySession(sid, now);
+        }
+        clients.delete(socket.id);
+        const remaining = Array.from(new Set(Array.from(clients.values()).map(u => u.fullname || u.username)));
+        io.emit('update-users', remaining);
+    });
 });
 
 server.listen(3000, () => console.log('Server is On'));

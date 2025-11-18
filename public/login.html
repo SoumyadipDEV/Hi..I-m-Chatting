@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Login - Chat</title>
+  <link rel="stylesheet" href="/auth.css">
+</head>
+<body>
+  <div class="container">
+    <h2>Login</h2>
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="username">Chat Username</label>
+        <input id="username" type="text" required />
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input id="password" type="password" required />
+      </div>
+      <div class="form-actions">
+        <button type="submit">Login</button>
+        <a href="/signup.html">Sign up</a>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      console.log('[LOGIN] Form submitted');
+      
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      console.log('[LOGIN] Form data:', { username, password: '***' });
+      
+      try {
+        console.log('[LOGIN] Sending login request...');
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        console.log('[LOGIN] Response status:', res.status);
+        
+        if (!res.ok) {
+          const json = await res.json().catch(()=>({ error: 'Login failed' }));
+          console.log('[LOGIN] Error response:', json);
+          const errorMsg = json.error || 'Login failed';
+          alert(`❌ ${errorMsg}`);
+          return;
+        }
+        
+        console.log('[LOGIN] Success! Redirecting to chat...');
+        window.location.href = '/';
+      } catch (err) {
+        console.error('[LOGIN] Exception:', err);
+        alert(`⚠️ Network error: ${err.message || 'Unable to connect'}`);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sign Up - Chat</title>
+  <link rel="stylesheet" href="/auth.css">
+</head>
+<body>
+  <div class="container">
+    <h2>Sign Up</h2>
+    <form id="signupForm">
+      <div class="form-group">
+        <label for="fullname">Full Name</label>
+        <input id="fullname" type="text" />
+      </div>
+      <div class="form-group">
+        <label for="username">Chat Username</label>
+        <input id="username" type="text" required />
+      </div>
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input id="email" type="email" />
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input id="password" type="password" required />
+      </div>
+      <div class="form-group">
+        <label for="confirmPassword">Confirm Password</label>
+        <input id="confirmPassword" type="password" required />
+      </div>
+      <div class="form-actions">
+        <button type="submit">Sign up</button>
+        <a href="/login.html">Already have an account?</a>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById('signupForm');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      console.log('[SIGNUP] Form submitted');
+      
+      const fullname = document.getElementById('fullname').value.trim();
+      const username = document.getElementById('username').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      
+      console.log('[SIGNUP] Form data:', { fullname, username, email, password: '***', confirmPassword: '***' });
+      
+      if (password !== confirmPassword) {
+        console.log('[SIGNUP] Passwords do not match');
+        alert('❌ Passwords do not match');
+        return;
+      }
+      if (password.length < 8) {
+        console.log('[SIGNUP] Password too short:', password.length);
+        alert('❌ Password must be at least 8 characters');
+        return;
+      }
+
+      try {
+        console.log('[SIGNUP] Sending signup request...');
+        const res = await fetch('/api/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password, fullname, email })
+        });
+        
+        console.log('[SIGNUP] Response status:', res.status);
+        
+        if (res.status === 201) {
+          console.log('[SIGNUP] Success! Redirecting to login...');
+          alert('✓ Signup successful! Redirecting to login...');
+          window.location.href = '/login.html';
+          return;
+        }
+        
+        const json = await res.json().catch(()=>({ error: 'Signup failed' }));
+        console.log('[SIGNUP] Error response:', json);
+        const errorMsg = json.error || 'Signup failed';
+        alert(`❌ ${errorMsg}`);
+      } catch (err) {
+        console.error('[SIGNUP] Exception:', err);
+        alert(`⚠️ Network error: ${err.message || 'Unable to connect'}`);
+      }
+    });
+  </script>
+</body>
+</html>
