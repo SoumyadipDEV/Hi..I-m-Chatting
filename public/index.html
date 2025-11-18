@@ -4,134 +4,388 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat App</title>
+    <!-- Load Tailwind CSS for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* Base styles */
         body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #e0f7fa;
-            font-family: Arial, sans-serif;
+            font-family: 'Inter', Arial, sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* --- Toggle Switch Styles --- */
+        .toggle-switch {
             position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
         }
-
-        #chat-container {
-            text-align: center;
-            background-color: #ffffff;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
         }
-
-        h1 {
-            color: #00796b;
-        }
-
-        #message {
-            width: 80%;
-            padding: 10px;
-            border: 2px solid #00796b;
-            border-radius: 5px;
-            margin-top: 20px;
-        }
-
-        #sendBtn {
-            padding: 10px 20px;
-            border: none;
-            background-color: #00796b;
-            color: white;
-            border-radius: 5px;
+        .slider {
+            position: absolute;
             cursor: pointer;
-            margin-top: 10px;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #00796b; /* Teal */
+        }
+        input:focus + .slider {
+            box-shadow: 0 0 1px #00796b;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
         }
 
+        /* --- Dark Mode Styles --- */
+        .dark {
+            /* AI Chat Dark Mode */
+            --ai-bg: #1f2937; /* gray-800 */
+            --ai-chat-bg: #374151; /* gray-700 */
+            --ai-text: #f3f4f6; /* gray-100 */
+            --ai-input-bg: #4b5563; /* gray-600 */
+            --ai-user-bubble: #3b82f6; /* blue-500 */
+            --ai-user-bubble-text: #ffffff;
+            --ai-gemini-bubble: #4b5563; /* gray-600 */
+            --ai-gemini-bubble-text: #f3f4f6; /* gray-100 */
+            
+            /* User Chat Dark Mode */
+            --user-bg: #263238; /* blue-gray-900 */
+            --user-container-bg: #37474f; /* blue-gray-800 */
+            --user-text: #eceff1; /* blue-gray-50 */
+            --user-header: #80cbc4; /* teal-200 */
+            --user-input-border: #80cbc4;
+            --user-btn-bg: #26a69a; /* teal-400 */
+            --user-btn-hover: #00897b; /* teal-600 */
+            --user-status-bg: #37474f;
+            --user-status-border: #80cbc4;
+            --user-status-name: #b2dfdb; /* teal-100 */
+            --user-message-border: #455a64; /* blue-gray-700 */
+        }
+
+        /* --- User Chat (Original) Styles --- */
+        body.user-chat-mode {
+            background-color: var(--user-bg, #e0f7fa);
+            color: var(--user-text, #000);
+        }
+        #chat-container {
+            background-color: var(--user-container-bg, #ffffff);
+                color: var(--user-text, #000);
+                border-radius: 4px; /* more rectangular */
+                padding: 20px;
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+                display: flex;
+                flex-direction: column;
+                width: 100%;
+                max-width: 420px;
+                height: 80vh; /* fixed card height so messages can scroll */
+        }
+        #chat-container h1 {
+            color: var(--user-header, #00796b);
+        }
+        #message {
+            border: 2px solid var(--user-input-border, #00796b);
+            background-color: transparent;
+            color: var(--user-text, #000);
+        }
+        #sendBtn {
+            background-color: var(--user-btn-bg, #00796b);
+        }
         #sendBtn:hover {
-            background-color: #004d40;
+            background-color: var(--user-btn-hover, #004d40);
         }
-
+        /* messages list inside user chat should scroll independently */
         #messages {
-            margin-top: 20px;
-            max-height: 300px;
+            margin-top: 1.25rem; /* mt-5 */
+            flex: 1 1 auto;
             overflow-y: auto;
             text-align: left;
+            padding-right: 8px; /* allow some room for scrollbar */
         }
 
-        p {
-            margin: 0;
-            padding: 5px 0;
-            border-bottom: 1px solid #e0f7fa;
+        #messages p {
+            border-bottom: 1px solid var(--user-message-border, #e0f7fa);
+            margin: 0 0 0.75rem 0;
+            padding-bottom: 0.5rem;
         }
-
         #user-status {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background-color: #ffffff;
-            border: 2px solid #00796b;
-            border-radius: 10px;
-            padding: 10px;
-            width: 200px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            background-color: var(--user-status-bg, #ffffff);
+            border: 2px solid var(--user-status-border, #00796b);
+            color: var(--user-text, #000);
+        }
+        .user-name {
+            color: var(--user-status-name, #00796b);
         }
 
-        .user {
+        /* --- AI Chat (New) Styles --- */
+        body.ai-chat-mode {
+            background-color: var(--ai-bg, #f3f4f6); /* gray-100 */
+            color: var(--ai-text, #1f2937); /* gray-800 */
+        }
+        #ai-chat-container {
+            background-color: var(--ai-chat-bg, #ffffff);
+            color: var(--ai-text, #1f2937);
+        }
+        
+        /* AI Chat Bubbles */
+        .ai-message {
+            display: flex;
+            margin-bottom: 12px;
+        }
+        .ai-message .bubble {
+            max-width: 75%;
+            padding: 10px 16px;
+            border-radius: 20px;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+        /* User's message */
+        .ai-message.user {
+            justify-content: flex-end;
+        }
+        .ai-message.user .bubble {
+            background-color: var(--ai-user-bubble, #00796b); /* Teal */
+            color: var(--ai-user-bubble-text, #ffffff);
+            border-bottom-right-radius: 4px;
+        }
+        /* Gemini's message */
+        .ai-message.gemini {
+            justify-content: flex-start;
+        }
+        .ai-message.gemini .bubble {
+            background-color: var(--ai-gemini-bubble, #e0f2f1); /* Lighter Teal */
+            color: var(--ai-gemini-bubble-text, #1f2937);
+            border-bottom-left-radius: 4px;
+        }
+        /* Typing indicator */
+        .ai-message.typing .bubble {
+            background-color: var(--ai-gemini-bubble, #e0f2f1);
+            color: var(--ai-gemini-bubble-text, #1f2937);
             display: flex;
             align-items: center;
-            margin-bottom: 5px;
         }
-
-        .user-dot {
-            height: 10px;
-            width: 10px;
-            background-color: green;
+        .typing-dot {
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
-            margin-right: 10px;
+            background-color: var(--ai-gemini-bubble-text, #888);
+            margin: 0 2px;
+            animation: typing-bounce 1.2s infinite ease-in-out;
+        }
+        .typing-dot:nth-child(2) { animation-delay: -1.0s; }
+        .typing-dot:nth-child(3) { animation-delay: -0.8s; }
+        @keyframes typing-bounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-4px); }
         }
 
-        .user-name {
-            font-size: 14px;
-            color: #00796b;
+        /* --- Send button / logo / animation --- */
+        .send-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: none;
+            cursor: pointer;
+            transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+        }
+        .send-btn .icon {
+            width: 18px;
+            height: 18px;
+            display: inline-block;
+            transition: transform 300ms ease, opacity 300ms ease;
+        }
+        .send-btn.sending {
+            transform: translateY(-1px) scale(0.995);
+            box-shadow: 0 6px 18px rgba(0,0,0,0.08) inset;
+        }
+        .send-btn.sending .icon {
+            animation: send-fly 420ms ease forwards;
+        }
+        @keyframes send-fly {
+            0% { transform: translateX(0) rotate(0deg); opacity: 1; }
+            60% { transform: translateX(8px) rotate(12deg); opacity: 0.9; }
+            100% { transform: translateX(20px) rotate(22deg); opacity: 0; }
         }
     </style>
 </head>
-<body>
-    <div id="chat-container">
-        <h1>Hi.. I'am Chatting</h1>
-        <div id="messages"></div>
-        <input type="text" placeholder="Enter new message" id="message"/>
-        <button id="sendBtn" disabled>Send</button>
-    </div>
-    <div id="user-status"></div>
+<!-- Set initial mode -->
+<body class="user-chat-mode">
 
-    <script src="/socket.io/socket.io.js"></script>
+    <!-- Toggles Container -->
+    <div class="absolute top-4 left-4 z-10 space-y-4">
+        <!-- AI Mode Toggle -->
+        <div class="flex items-center space-x-2">
+            <span id="mode-label" class="font-medium text-gray-700 dark:text-gray-300">User Chat</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="mode-toggle-switch">
+                <span class="slider"></span>
+            </label>
+        </div>
+        
+        <!-- Dark Mode Toggle -->
+        <div class="flex items-center space-x-2">
+            <span class="font-medium text-gray-700 dark:text-gray-300">Light</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="dark-mode-toggle">
+                <span class="slider"></span>
+            </label>
+            <span class="font-medium text-gray-700 dark:text-gray-300">Dark</span>
+        </div>
+    </div>
+
+    <!-- Original User Chat Container -->
+    <div id="user-chat-wrapper" class="flex justify-center items-center h-screen w-full">
+    <div id="chat-container" class="text-center">
+            <h1>Hi.. I'm Chatting</h1>
+            <div id="messages"></div>
+            <!-- Input row: text input and send button inline -->
+            <div class="mt-5 flex items-center space-x-3">
+                <input type="text" placeholder="Enter new message" id="message" class="flex-1 p-2.5 border-2 rounded-sm" />
+                <button id="sendBtn" disabled class="px-4 py-3 bg-[#00796b] text-white rounded-full cursor-pointer send-btn font-semibold" aria-label="Send message">
+                    <!-- paper-plane SVG icon -->
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M2 21L23 12L2 3L2 10L17 12L2 14L2 21Z" fill="white"/>
+                    </svg>
+                    <span class="label">Send</span>
+                </button>
+            </div>
+        </div>
+        <div id="user-status" class="absolute top-5 right-5 bg-white border-2 border-[#00796b] rounded-lg p-2.5 w-52 shadow-md"></div>
+    </div>
+
+    <!-- New AI Chat Container (Centered, Initially Hidden) -->
+    <div id="ai-chat-container" class="hidden flex justify-center items-center h-screen w-full">
+        <div class="w-full max-w-2xl flex flex-col p-4 bg-white rounded-lg shadow-md" style="height: 80vh; background-color: var(--ai-chat-bg, #ffffff); color: var(--ai-text, #1f2937);">
+            <h1 class="text-3xl font-bold text-center mb-4" style="color: #00796b;">Gemini AI Chat</h1>
+            
+            <!-- Chat Messages Area -->
+            <div id="ai-messages" class="flex-1 overflow-y-auto p-4 space-y-4 rounded-lg" style="background-color: var(--ai-bg, #f3f4f6);">
+                <!-- Messages will be appended here -->
+                <div class="ai-message gemini">
+                    <div class="bubble">
+                        Hi <span id="ai-username" class="font-semibold">User</span>! How can I help you today?
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Input Area -->
+            <div class="mt-4 flex space-x-2">
+                <input type="text" id="ai-message-input" placeholder="Ask Gemini..." class="flex-1 px-4 py-3 rounded-full border-2 border-gray-300 focus:outline-none focus:border-teal-500" style="background-color: var(--ai-input-bg, #ffffff); color: var(--ai-text, #000);">
+                <button id="ai-send-btn" class="px-4 py-3 rounded-full font-semibold text-white transition-colors send-btn" style="background-color: #00796b; border: none; cursor: pointer;">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M2 21L23 12L2 3L2 10L17 12L2 14L2 21Z" fill="white"/>
+                    </svg>
+                    <span class="label">Send</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Load Socket.IO client from CDN to fix 'io is not defined' error in environments without the Node.js server -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script>
+        // --- COMMON ---
+        let chatName = '';
+        const modeToggle = document.getElementById('mode-toggle-switch');
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        const userChatWrapper = document.getElementById('user-chat-wrapper');
+        const aiChatContainer = document.getElementById('ai-chat-container');
+        const modeLabel = document.getElementById('mode-label');
+        let isAiMode = false;
+
+        // --- USER CHAT (Original) ---
         const socket = io();
         const sendBtn = document.getElementById('sendBtn');
         const messageInput = document.getElementById('message');
         const allMessages = document.getElementById('messages');
         const userStatus = document.getElementById('user-status');
 
-        // Prompt for chat name
-        let chatName = '';
+        // --- AI CHAT (New) ---
+        const aiMessages = document.getElementById('ai-messages');
+        const aiMessageInput = document.getElementById('ai-message-input');
+        const aiSendBtn = document.getElementById('ai-send-btn');
+        const aiUsername = document.getElementById('ai-username');
 
-        while (!chatName) {
-            chatName = prompt("Enter your chat name:");
+
+        // --- INITIALIZATION ---
+        function initializeChat() {
+            // Prompt for chat name
+            while (!chatName) {
+                chatName = prompt("Enter your chat name:");
+            }
+
+            // --- User Chat Setup ---
+            sendBtn.disabled = false;
+            socket.emit('add-user', chatName);
+
+            // --- AI Chat Setup ---
+            aiUsername.innerText = chatName;
         }
 
-        // Enable the send button after chat name is provided
-        sendBtn.disabled = false;
+        initializeChat();
 
-        // Emit event to add user
-        socket.emit('add-user', chatName);
+    // Ensure mode label reflects the current active mode on load
+    modeLabel.innerText = isAiMode ? 'AI Chat' : 'User Chat';
 
+        // --- DARK MODE TOGGLE ---
+        darkModeToggle.addEventListener('change', () => {
+            document.body.classList.toggle('dark');
+        });
+
+        // --- MODE TOGGLE ---
+        modeToggle.addEventListener('change', () => {
+            isAiMode = modeToggle.checked;
+            if (isAiMode) {
+                // Switch to AI Mode
+                userChatWrapper.classList.add('hidden');
+                aiChatContainer.classList.remove('hidden');
+                aiChatContainer.classList.add('flex');
+                document.body.classList.remove('user-chat-mode');
+                document.body.classList.add('ai-chat-mode');
+                // Show current selected mode
+                modeLabel.innerText = "AI Chat";
+            } else {
+                // Switch to User Chat Mode
+                userChatWrapper.classList.remove('hidden');
+                aiChatContainer.classList.add('hidden');
+                aiChatContainer.classList.remove('flex');
+                document.body.classList.add('user-chat-mode');
+                document.body.classList.remove('ai-chat-mode');
+                // Show current selected mode
+                modeLabel.innerText = "User Chat";
+            }
+        });
+
+
+        // --- USER CHAT LOGIC (Original) ---
         socket.on('broadcast', (data) => {
             const p = document.createElement('p');
             p.innerText = `${data.name}: ${data.message}`;
             allMessages.appendChild(p);
+            allMessages.scrollTop = allMessages.scrollHeight; // Auto-scroll
         });
 
-        // Disable the send button if the input is empty
         messageInput.addEventListener('input', () => {
             sendBtn.disabled = !messageInput.value.trim();
         });
@@ -139,9 +393,20 @@
         sendBtn.addEventListener('click', (e) => {
             const message = messageInput.value.trim();
             if (message) {
+                // tiny send animation
+                sendBtn.classList.add('sending');
+                setTimeout(() => sendBtn.classList.remove('sending'), 420);
+
                 socket.emit('user-message', { name: chatName, message });
-                messageInput.value = '';  // Clear input field after sending message
-                sendBtn.disabled = true;  // Disable send button until new message is entered
+                messageInput.value = '';
+                sendBtn.disabled = true;
+            }
+        });
+        
+        // Also send on Enter key
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !sendBtn.disabled) {
+                sendBtn.click();
             }
         });
 
@@ -149,17 +414,131 @@
             userStatus.innerHTML = ''; // Clear the user list
             users.forEach(user => {
                 const div = document.createElement('div');
-                div.classList.add('user');
+                div.className = 'user flex items-center mb-1.5';
                 const dot = document.createElement('div');
-                dot.classList.add('user-dot');
+                dot.className = 'user-dot h-2.5 w-2.5 bg-green-500 rounded-full mr-2.5';
                 const name = document.createElement('span');
-                name.classList.add('user-name');
+                name.className = 'user-name text-sm';
                 name.innerText = user;
                 div.appendChild(dot);
                 div.appendChild(name);
                 userStatus.appendChild(div);
             });
         });
+
+        // --- AI CHAT LOGIC (New) ---
+
+        function appendAiMessage(sender, message) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('ai-message', sender);
+            
+            const bubble = document.createElement('div');
+            bubble.classList.add('bubble');
+            
+            // Convert markdown (like **text**) to HTML
+            message = message.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            // Convert newlines to <br>
+            message = message.replace(/\n/g, '<br>');
+            
+            bubble.innerHTML = message;
+            
+            messageElement.appendChild(bubble);
+            aiMessages.appendChild(messageElement);
+            aiMessages.scrollTop = aiMessages.scrollHeight; // Auto-scroll
+        }
+        
+        function showTypingIndicator() {
+            const typingElement = document.createElement('div');
+            typingElement.id = 'typing-indicator';
+            typingElement.classList.add('ai-message', 'gemini', 'typing');
+            typingElement.innerHTML = `
+                <div class="bubble">
+                    <span class="typing-dot"></span>
+                    <span class="typing-dot"></span>
+                    <span class="typing-dot"></span>
+                </div>
+            `;
+            aiMessages.appendChild(typingElement);
+            aiMessages.scrollTop = aiMessages.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const typingElement = document.getElementById('typing-indicator');
+            if (typingElement) {
+                typingElement.remove();
+            }
+        }
+
+        async function handleAiChatSend() {
+            const prompt = aiMessageInput.value.trim();
+            if (!prompt) return;
+
+            // Display user message
+            appendAiMessage('user', prompt);
+            aiMessageInput.value = '';
+            aiSendBtn.disabled = true;
+            aiSendBtn.classList.add('sending');
+
+            // Show typing indicator
+            showTypingIndicator();
+
+            try {
+                // Call Gemini API
+                const result = await callGeminiApi(prompt);
+                removeTypingIndicator();
+                appendAiMessage('gemini', result.text);
+            } catch (error) {
+                removeTypingIndicator();
+                console.error('Error calling Gemini API:', error);
+                appendAiMessage('gemini', `Sorry, I ran into an error. Please try again. \n(${error.message})`);
+            }
+            aiSendBtn.disabled = false;
+            aiSendBtn.classList.remove('sending');
+        }
+
+        aiSendBtn.addEventListener('click', handleAiChatSend);
+        aiMessageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleAiChatSend();
+            }
+        });
+
+        // --- GEMINI API CALL (server-side proxy) ---
+        // This function calls our server endpoint which holds the API key.
+        async function callGeminiApi(prompt, retries = 3, delay = 1000) {
+            if (!prompt) throw new Error('Missing prompt');
+
+            const payload = { prompt };
+
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch('/api/gemini', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
+
+                    if (!response.ok) {
+                        const text = await response.text();
+                        throw new Error(`Server Error: ${response.status} ${response.statusText} - ${text}`);
+                    }
+
+                    const result = await response.json();
+                    if (result && result.text) {
+                        return { text: result.text };
+                    }
+
+                    throw new Error(result.error || 'No content returned from server');
+                } catch (err) {
+                    console.warn(`Client Gemini attempt ${i + 1} failed:`, err.message || err);
+                    if (i === retries - 1) throw err;
+                    await new Promise(r => setTimeout(r, delay));
+                    delay *= 2;
+                }
+            }
+            throw new Error('Failed to get response after all retries.');
+        }
+
     </script>
 </body>
 </html>
