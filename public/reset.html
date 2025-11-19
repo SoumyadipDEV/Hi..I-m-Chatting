@@ -1,0 +1,139 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Reset Password - Chat</title>
+  <link rel="stylesheet" href="/auth.css">
+</head>
+<body>
+  <div class="container">
+    <h2>Reset Password</h2>
+    
+    <!-- Step 1: Get reset token -->
+    <div id="step1" class="form-section">
+      <h3 style="font-size: 16px; margin-bottom: 12px;">Step 1: Get Reset Token</h3>
+      <form id="getTokenForm">
+        <div class="form-group">
+          <label for="usernameStep1">Chat Username</label>
+          <input id="usernameStep1" type="text" placeholder="Enter your username" required />
+        </div>
+        <button type="submit">Generate Reset Token</button>
+      </form>
+    </div>
+
+    <!-- Step 2: Reset password with token -->
+    <div id="step2" class="form-section" style="display: none;">
+      <h3 style="font-size: 16px; margin-bottom: 12px;">Step 2: Reset Your Password</h3>
+      <form id="resetForm">
+        <div class="form-group">
+          <label for="newPassword">New Password</label>
+          <input id="newPassword" type="password" placeholder="At least 8 characters" required />
+        </div>
+        <div class="form-group">
+          <label for="confirmPassword">Confirm Password</label>
+          <input id="confirmPassword" type="password" placeholder="Confirm your password" required />
+        </div>
+        <div class="form-actions">
+          <button type="submit">Reset Password</button>
+          <a href="/login.html">Back to Login</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <style>
+    .form-section {
+      margin-bottom: 24px;
+    }
+  </style>
+
+  <script>
+    let resetToken = null;
+
+    // Step 1: Get reset token
+    const getTokenForm = document.getElementById('getTokenForm');
+    getTokenForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('usernameStep1').value.trim();
+      
+      if (!username) {
+        alert('❌ Please enter your username');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username })
+        });
+
+        const json = await res.json();
+
+        if (!res.ok) {
+          alert(`❌ ${json.error || 'Failed to generate reset token'}`);
+          return;
+        }
+
+        resetToken = json.token;
+
+        // Hide step 1, show step 2
+        document.getElementById('step1').style.display = 'none';
+        document.getElementById('step2').style.display = 'block';
+        document.getElementById('newPassword').focus();
+
+      } catch (err) {
+        alert(`⚠️ Network error: ${err.message}`);
+      }
+    });
+
+    // Step 2: Reset password
+    const resetForm = document.getElementById('resetForm');
+    resetForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const newPassword = document.getElementById('newPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+
+      if (!newPassword || !confirmPassword) {
+        alert('❌ Please enter and confirm your new password');
+        return;
+      }
+
+      if (newPassword.length < 8) {
+        alert('❌ Password must be at least 8 characters');
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        alert('❌ Passwords do not match');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: resetToken, newPassword })
+        });
+
+        const json = await res.json();
+
+        if (!res.ok) {
+          alert(`❌ ${json.error || 'Failed to reset password'}`);
+          return;
+        }
+
+        alert('✅ Password reset successful! Redirecting to login...');
+        setTimeout(() => {
+          window.location.href = '/login.html';
+        }, 1500);
+
+      } catch (err) {
+        alert(`⚠️ Network error: ${err.message}`);
+      }
+    });
+  </script>
+</body>
+</html>

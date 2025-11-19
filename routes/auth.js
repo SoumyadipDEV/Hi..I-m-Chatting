@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const { DateTime } = require('luxon');
 const db = require('../lib/db');
 
@@ -70,6 +71,51 @@ router.post('/logout', (req, res) => {
 router.get('/me', (req, res) => {
   if (req.session && req.session.user) return res.json({ user: req.session.user });
   return res.status(401).json({ error: 'Not authenticated' });
+});
+
+// Forgot password - generate reset token
+router.post('/forgot-password', (req, res) => {
+  const { username } = req.body || {};
+  if (!username || typeof username !== 'string') return res.status(400).json({ error: 'Username is required' });
+
+  const user = db.getUserByUsername(username);
+  if (!user) return res.status(404).json({ error: 'Username not found' });
+
+  // Generate random token
+  const token = crypto.randomBytes(32).toString('hex');
+  const token_hash = crypto.createHash('sha256').update(token).digest('hex');
+  const expires_at = DateTime.now().setZone('Asia/Kolkata').plus({ minutes: 30 }).toISO();
+
+  db.insertResetToken({ user_id: user.id, username: user.username, token, token_hash, expires_at });
+
+  return res.json({ success: true, token, message: 'Password reset token generated. You have 30 minutes to use it.' });
+});
+
+// Reset password - validate token and update password
+router.post('/reset-password', async (req, res) => {
+  const { token, newPassword } = req.body || {};
+  if (!token || !newPassword) return res.status(400).json({ error: 'Token and password are required' });
+  if (typeof newPassword !== 'string' || newPassword.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+
+  // Hash the token to look it up
+  const token_hash = crypto.createHash('sha256').update(token).digest('hex');
+  const tokenRecord = db.getResetTokenByHash(token_hash);
+
+  if (!tokenRecord) return res.status(401).json({ error: 'Invalid or expired token' });
+
+  // Check if token has expired
+  const now = DateTime.now().setZone('Asia/Kolkata');
+  const expiresAt = DateTime.fromISO(tokenRecord.expires_at);
+  if (now > expiresAt) return res.status(401).json({ error: 'Token has expired' });
+
+  // Hash new password and update user
+  const password_hash = await bcrypt.hash(newPassword, 10);
+  db.updateUserPassword(tokenRecord.user_id, password_hash);
+
+  // Mark token as used
+  db.markResetTokenAsUsed(token_hash);
+
+  return res.json({ success: true, message: 'Password reset successful. Please log in with your new password.' });
 });
 
 module.exports = router;

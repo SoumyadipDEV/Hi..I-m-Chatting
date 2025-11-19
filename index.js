@@ -130,7 +130,39 @@ io.on('connection', (socket) => {
     io.emit('update-users', usernames);
 
     socket.on('user-message', (data) => {
-        io.emit('broadcast', data);
+        // Add timestamp to message
+        const { DateTime } = require('luxon');
+        const timestamp = DateTime.now().setZone('Asia/Kolkata').toISO();
+        
+        // Store message in database
+        const user = clients.get(socket.id);
+        if (user) {
+            try {
+                db.insertMessage({
+                    user_id: user.userId,
+                    username: data.name,
+                    fullname: user.fullname,
+                    message: data.message,
+                    message_type: 'text',
+                    timestamp
+                });
+            } catch (err) {
+                console.error('[MESSAGE] Failed to save message:', err.message);
+            }
+        }
+        
+        // Broadcast with timestamp
+        io.emit('broadcast', { ...data, timestamp });
+    });
+
+    socket.on('typing', (data) => {
+        // Broadcast typing indicator
+        socket.broadcast.emit('user-typing', { username: data.name });
+    });
+
+    socket.on('stop-typing', (data) => {
+        // Broadcast stop typing
+        socket.broadcast.emit('user-stop-typing', { username: data.name });
     });
 
     socket.on('disconnect', () => {

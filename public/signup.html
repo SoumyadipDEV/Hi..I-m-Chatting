@@ -51,6 +51,19 @@
       
       console.log('[SIGNUP] Form data:', { fullname, username, email, password: '***', confirmPassword: '***' });
       
+      // Validate required fields
+      if (!fullname || !username || !password) {
+        alert('❌ Please fill in all required fields');
+        return;
+      }
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (email && !emailRegex.test(email)) {
+        alert('❌ Please enter a valid email address');
+        return;
+      }
+      
       if (password !== confirmPassword) {
         console.log('[SIGNUP] Passwords do not match');
         alert('❌ Passwords do not match');
@@ -59,6 +72,11 @@
       if (password.length < 8) {
         console.log('[SIGNUP] Password too short:', password.length);
         alert('❌ Password must be at least 8 characters');
+        return;
+      }
+      
+      if (username.length < 3) {
+        alert('❌ Username must be at least 3 characters');
         return;
       }
 
@@ -85,7 +103,8 @@
         alert(`❌ ${errorMsg}`);
       } catch (err) {
         console.error('[SIGNUP] Exception:', err);
-        alert(`⚠️ Network error: ${err.message || 'Unable to connect'}`);
+        const errorMsg = err.message || 'Unable to connect to server';
+        alert(`⚠️ Network error: ${errorMsg}\n\nPlease check your connection and try again.`);
       }
     });
   </script>

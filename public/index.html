@@ -87,6 +87,17 @@
     <!-- Load Socket.IO client from CDN to fix 'io is not defined' error in environments without the Node.js server -->
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script>
+        // --- UTILITY FUNCTIONS ---
+        function escapeHtml(text) {
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+        
+        // Request notification permission
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+        
         // --- COMMON ---
         let chatName = '';
     const modeToggle = document.getElementById('mode-toggle-switch');
@@ -97,6 +108,7 @@
     // single controls block (we'll move this between chat containers on mode switch)
     const chatControls = document.getElementById('chat-controls');
         let isAiMode = false;
+        let typingTimeout = null;
 
         // --- USER CHAT (Original) ---
         let socket = null;
@@ -234,11 +246,65 @@
         // --- USER CHAT LOGIC (Original) ---
         function attachSocketHandlers() {
             if (!socket) return;
+            
+            // Helper to format timestamp to IST
+            function formatTimestamp(isoString) {
+                if (!isoString) return '';
+                try {
+                    const date = new Date(isoString);
+                    return date.toLocaleString('en-IN', { 
+                        year: '2-digit',
+                        month: '2-digit', 
+                        day: '2-digit',
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: true,
+                        timeZone: 'Asia/Kolkata'
+                    });
+                } catch (e) {
+                    return '';
+                }
+            }
+            
+            // Helper to show notification
+            function showNotification(title, options = {}) {
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    try {
+                        new Notification(title, { icon: '/favicon.ico', ...options });
+                    } catch (e) {
+                        console.log('[NOTIF] Notification failed:', e.message);
+                    }
+                }
+            }
+            
             socket.on('broadcast', (data) => {
                 const p = document.createElement('p');
-                p.innerText = `${data.name}: ${data.message}`;
+                const timestamp = data.timestamp ? `[${formatTimestamp(data.timestamp)}]` : '';
+                p.innerHTML = `<strong>${data.name}</strong> ${timestamp}: ${escapeHtml(data.message)}`;
+                p.style.marginBottom = '0.75rem';
+                p.style.paddingBottom = '0.5rem';
                 allMessages.appendChild(p);
-                allMessages.scrollTop = allMessages.scrollHeight; // Auto-scroll
+                allMessages.scrollTop = allMessages.scrollHeight;
+                
+                // Show notification for new messages
+                showNotification(`New message from ${data.name}`, { body: data.message });
+            });
+            
+            socket.on('user-typing', (data) => {
+                const typingEl = document.getElementById(`typing-${data.username}`);
+                if (!typingEl) {
+                    const typing = document.createElement('p');
+                    typing.id = `typing-${data.username}`;
+                    typing.innerHTML = `<em style="color: #999;">${escapeHtml(data.username)} is typing...</em>`;
+                    allMessages.appendChild(typing);
+                    allMessages.scrollTop = allMessages.scrollHeight;
+                }
+            });
+            
+            socket.on('user-stop-typing', (data) => {
+                const typingEl = document.getElementById(`typing-${data.username}`);
+                if (typingEl) typingEl.remove();
             });
 
             socket.on('update-users', (users) => {
@@ -248,21 +314,45 @@
                 
                 users.forEach(user => {
                     const div = document.createElement('div');
-                    div.className = 'user flex items-center mb-1.5';
+                    div.className = 'user flex items-center mb-2';
+                    
+                    // Create avatar with colored background and first letter
+                    const avatarColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2'];
+                    const avatarColor = avatarColors[user.charCodeAt(0) % avatarColors.length];
+                    
+                    const avatar = document.createElement('div');
+                    avatar.className = 'user-avatar w-6 h-6 rounded-full flex items-center justify-center mr-2 text-xs font-bold text-white';
+                    avatar.style.backgroundColor = avatarColor;
+                    avatar.innerText = user.charAt(0).toUpperCase();
+                    
                     const dot = document.createElement('div');
-                    dot.className = 'user-dot h-2.5 w-2.5 bg-green-500 rounded-full mr-2.5';
+                    dot.className = 'user-dot h-2 w-2 bg-green-500 rounded-full mr-2';
+                    
                     const name = document.createElement('span');
-                    name.className = 'user-name text-sm';
+                    name.className = 'user-name text-sm font-semibold';
                     name.innerText = user;
+                    
+                    div.appendChild(avatar);
                     div.appendChild(dot);
                     div.appendChild(name);
                     userStatus.appendChild(div);
                 });
             });
-        }
+        };
 
         messageInput.addEventListener('input', () => {
             sendBtn.disabled = !messageInput.value.trim();
+            
+            // Send typing indicator
+            if (socket && messageInput.value.trim()) {
+                socket.emit('typing', { name: chatName });
+                
+                // Clear previous timeout and set new one
+                clearTimeout(typingTimeout);
+                typingTimeout = setTimeout(() => {
+                    socket.emit('stop-typing', { name: chatName });
+                }, 2000);
+            }
         });
 
         sendBtn.addEventListener('click', (e) => {
