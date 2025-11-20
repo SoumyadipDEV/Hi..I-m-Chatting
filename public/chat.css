@@ -200,6 +200,149 @@ body.user-chat-mode {
 }
 
 /* ============================================
+   Mobile Responsive Styles
+   ============================================ */
+
+/* Mobile Menu Toggle Button */
+.mobile-menu-toggle {
+  display: none;
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  width: 40px;
+  height: 40px;
+  background-color: var(--user-btn-bg, #00796b);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  z-index: 100;
+  padding: 8px;
+}
+
+.mobile-menu-toggle svg {
+  width: 100%;
+  height: 100%;
+}
+
+.mobile-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 49;
+}
+
+.mobile-overlay.active {
+  display: block;
+}
+
+/* User Status Panel */
+#user-status {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background-color: var(--user-status-bg, #ffffff);
+  border: 2px solid var(--user-status-border, #00796b);
+  color: var(--user-text, #000);
+  border-radius: 4px;
+  padding: 12px;
+  width: 220px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 50;
+}
+
+.close-status-panel {
+  display: none;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--user-text, #000);
+  padding: 0;
+}
+
+.close-status-panel svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Tablet and Mobile Breakpoints */
+@media (max-width: 768px) {
+  .mobile-menu-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #user-status {
+    position: fixed;
+    top: 0;
+    right: -280px;
+    left: auto;
+    width: 280px;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+    border: none;
+    border-right: 2px solid var(--user-status-border, #00796b);
+    transition: right 0.3s ease;
+    padding: 20px 16px;
+  }
+
+  #user-status.active {
+    right: 0;
+  }
+
+  .close-status-panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #chat-container {
+    width: calc(100% - 40px);
+    margin: 0 auto;
+    max-width: none;
+  }
+
+  #user-chat-wrapper {
+    padding-top: 20px;
+  }
+
+  #ai-chat-container {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  #chat-container {
+    width: calc(100% - 20px);
+    max-width: none;
+    height: calc(100vh - 100px);
+  }
+
+  #user-status {
+    width: 100%;
+    right: -100%;
+  }
+
+  .mobile-menu-toggle {
+    top: 12px;
+    left: 12px;
+  }
+}
+
+/* ============================================
    AI Chat Mode Styles
    ============================================ */
 

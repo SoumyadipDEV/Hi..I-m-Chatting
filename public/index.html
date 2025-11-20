@@ -79,10 +79,25 @@
         </div>
     </div>
 
-    <!-- User Status Box (Active Users & Logout) - Visible in both modes -->
-    <div id="user-status" class="absolute top-5 right-5 bg-white border-2 border-[#00796b] rounded-lg p-2.5 w-52 shadow-md">
+    <!-- Mobile Menu Toggle Button -->
+    <button id="mobile-menu-toggle" class="mobile-menu-toggle" title="Toggle user status panel" aria-label="Toggle menu">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+    </button>
+
+    <!-- User Status Panel (Collapsible on Mobile) -->
+    <div id="user-status" class="user-status-panel">
+        <button id="close-status-panel" class="close-status-panel" title="Close panel" aria-label="Close panel">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </button>
         <button id="logoutBtn" class="w-full px-3 py-2 mb-3 bg-red-500 text-white rounded text-sm font-semibold hover:bg-red-600 transition">Logout</button>
     </div>
+    
+    <!-- Mobile Overlay (closes panel when clicked) -->
+    <div id="mobile-overlay" class="mobile-overlay"></div>
 
     <!-- Load Socket.IO client from CDN to fix 'io is not defined' error in environments without the Node.js server -->
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
@@ -308,35 +323,49 @@
             });
 
             socket.on('update-users', (users) => {
-                // Remove only the user list items, keep the logout button
-                const userItems = userStatus.querySelectorAll('.user');
-                userItems.forEach(item => item.remove());
-                
-                users.forEach(user => {
-                    const div = document.createElement('div');
-                    div.className = 'user flex items-center mb-2';
+                try {
+                    // Remove only the user list items, keep the logout button
+                    if (!userStatus) {
+                        console.warn('[USERS] userStatus element is null/undefined');
+                        return;
+                    }
                     
-                    // Create avatar with colored background and first letter
-                    const avatarColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2'];
-                    const avatarColor = avatarColors[user.charCodeAt(0) % avatarColors.length];
+                    const userItems = userStatus.querySelectorAll('.user');
+                    userItems.forEach(item => item.remove());
                     
-                    const avatar = document.createElement('div');
-                    avatar.className = 'user-avatar w-6 h-6 rounded-full flex items-center justify-center mr-2 text-xs font-bold text-white';
-                    avatar.style.backgroundColor = avatarColor;
-                    avatar.innerText = user.charAt(0).toUpperCase();
+                    if (!Array.isArray(users)) {
+                        console.warn('[USERS] users is not an array:', users);
+                        return;
+                    }
                     
-                    const dot = document.createElement('div');
-                    dot.className = 'user-dot h-2 w-2 bg-green-500 rounded-full mr-2';
-                    
-                    const name = document.createElement('span');
-                    name.className = 'user-name text-sm font-semibold';
-                    name.innerText = user;
-                    
-                    div.appendChild(avatar);
-                    div.appendChild(dot);
-                    div.appendChild(name);
-                    userStatus.appendChild(div);
-                });
+                    users.forEach(user => {
+                        const div = document.createElement('div');
+                        div.className = 'user flex items-center mb-2';
+                        
+                        // Create avatar with colored background and first letter
+                        const avatarColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2'];
+                        const avatarColor = avatarColors[user.charCodeAt(0) % avatarColors.length];
+                        
+                        const avatar = document.createElement('div');
+                        avatar.className = 'user-avatar w-6 h-6 rounded-full flex items-center justify-center mr-2 text-xs font-bold text-white';
+                        avatar.style.backgroundColor = avatarColor;
+                        avatar.innerText = user.charAt(0).toUpperCase();
+                        
+                        const dot = document.createElement('div');
+                        dot.className = 'user-dot h-2 w-2 bg-green-500 rounded-full mr-2';
+                        
+                        const name = document.createElement('span');
+                        name.className = 'user-name text-sm font-semibold';
+                        name.innerText = user;
+                        
+                        div.appendChild(avatar);
+                        div.appendChild(dot);
+                        div.appendChild(name);
+                        userStatus.appendChild(div);
+                    });
+                } catch (err) {
+                    console.error('[USERS] Error updating user list:', err);
+                }
             });
         };
 
@@ -490,6 +519,69 @@
             throw new Error('Failed to get response after all retries.');
         }
 
+    </script>
+
+    <!-- Mobile Panel Controller -->
+    <script>
+        // Initialize mobile menu after DOM is fully loaded
+        function initMobileMenu() {
+            console.log('[MOBILE] initMobileMenu called');
+            const menuToggle = document.getElementById('mobile-menu-toggle');
+            const userStatusPanel = document.getElementById('user-status');
+            const overlay = document.getElementById('mobile-overlay');
+            const closePanel = document.getElementById('close-status-panel');
+
+            console.log('[MOBILE] Elements found:', {
+                menuToggle: !!menuToggle,
+                userStatusPanel: !!userStatusPanel,
+                overlay: !!overlay,
+                closePanel: !!closePanel
+            });
+
+            if (!menuToggle || !userStatusPanel || !overlay || !closePanel) {
+                console.warn('[MOBILE] Mobile menu elements not found');
+                return;
+            }
+
+            // Open panel on menu button click
+            menuToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                userStatusPanel.classList.add('active');
+                overlay.classList.add('active');
+            });
+
+            // Close panel on close button click
+            closePanel.addEventListener('click', (e) => {
+                e.stopPropagation();
+                userStatusPanel.classList.remove('active');
+                overlay.classList.remove('active');
+            });
+
+            // Close panel on overlay click
+            overlay.addEventListener('click', (e) => {
+                e.stopPropagation();
+                console.log('[MOBILE] Overlay clicked');
+                userStatusPanel.classList.remove('active');
+                overlay.classList.remove('active');
+            });
+
+            // Close panel when window resizes to desktop size (> 768px)
+            window.addEventListener('resize', () => {
+                if (window.innerWidth > 768) {
+                    userStatusPanel.classList.remove('active');
+                    overlay.classList.remove('active');
+                }
+            });
+
+            console.log('[MOBILE] Mobile menu initialized successfully');
+        }
+
+        // Run when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initMobileMenu);
+        } else {
+            initMobileMenu();
+        }
     </script>
 </body>
 </html>

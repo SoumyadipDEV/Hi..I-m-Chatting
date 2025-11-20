@@ -3,3 +3,4 @@ node_modules/
 app.db
 app.db-shm
 app.db-wal
+index-old.js

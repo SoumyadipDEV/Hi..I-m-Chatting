@@ -10,17 +10,18 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "dotenv": "^17.2.3",
-    "express": "^4.19.2",
-    "node-fetch": "^2.7.0",
-    "socket.io": "^4.7.5",
-    "ws": "^8.18.0",
+    "@toon-format/toon": "^1.0.0",
+    "bcryptjs": "^2.4.3",
     "better-sqlite3": "^8.5.0",
     "better-sqlite3-session-store": "*",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^17.2.3",
+    "express": "^4.19.2",
     "express-session": "^1.17.3",
-    "bcryptjs": "^2.4.3",
-    "luxon": "^3.4.0",
     "helmet": "^6.0.1",
-    "cookie-parser": "^1.4.6"
+    "luxon": "^3.7.2",
+    "node-fetch": "^2.7.0",
+    "socket.io": "^4.7.5",
+    "ws": "^8.18.0"
   }
 }
